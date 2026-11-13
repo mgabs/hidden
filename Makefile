@@ -16,6 +16,7 @@ help: ## Show available targets
 
 build: ## Build Release-Direct app into build/
 	xcodebuild -project "$(PROJECT)" -scheme "$(SCHEME)" -configuration Release-Direct -derivedDataPath "$(DERIVED_DATA)" -destination "platform=macOS" $(SIGNING) build
+	@if [ -n "$(SIGNING)" ]; then codesign --force --deep --sign - "$(RELEASE_APP)"; fi
 	@echo "Built: $(RELEASE_APP)"
 
 test: ## Run Debug-Direct unit tests
