@@ -7,15 +7,12 @@
 //
 
 import Cocoa
-import Carbon
 import HotKey
 
 class PreferencesViewController: NSViewController {
 
 
     //MARK: - Outlets
-    @IBOutlet weak var textFieldTitle: NSTextField!
-
     @IBOutlet weak var statusBarStackView: NSStackView!
     @IBOutlet weak var arrowPointToHiddenImage: NSImageView!
     @IBOutlet weak var arrowPointToAlwayHiddenImage: NSImageView!

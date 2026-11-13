@@ -140,3 +140,6 @@ DerivedData/
 .lgtm/
 
 .worktrees/
+## develop...origin/develop [ahead 25]
+concepts_brief.md
+docs/designs/

@@ -7,7 +7,6 @@
 
 import CoreAudio
 import CoreMediaIO
-import Foundation
 
 // Whether any app is recording from a microphone or using a camera. macOS 27
 // runs every native visibility restriction in assessment mode, which also hides

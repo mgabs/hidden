@@ -65,6 +65,7 @@ final class NativeVisibilityEngine: MenuBarEngine {
     private let itemFrame: (NSStatusItem) -> CGRect?
     private let displays: () -> [MenuBarDisplay]
     private let isLTR: () -> Bool
+    private let activationTimeout: TimeInterval
 
     private let expandedLength: CGFloat = 20
 
@@ -80,7 +81,6 @@ final class NativeVisibilityEngine: MenuBarEngine {
     // Bumped whenever a pending activation must no longer win (an expand, a newer
     // activation); a late success is then invalidated straight away.
     private var generation = 0
-    private var lastUnavailableReason: String?
     // The capture state last acted on, so only a change moves the restriction.
     private var isCaptureActive: Bool
 
@@ -95,7 +95,8 @@ final class NativeVisibilityEngine: MenuBarEngine {
          ownBundleIdentifier: String? = Bundle.main.bundleIdentifier,
          itemFrame: @escaping (NSStatusItem) -> CGRect? = { $0.button?.window?.frame },
          displays: @escaping () -> [MenuBarDisplay] = MenuBarDisplayInventory.current,
-         isLTR: @escaping () -> Bool = { Constant.isUsingLTRLanguage }) {
+         isLTR: @escaping () -> Bool = { Constant.isUsingLTRLanguage },
+         activationTimeout: TimeInterval = 2.0) {
         self.items = items
         self.inventory = inventory
         self.visibility = visibility
@@ -105,6 +106,7 @@ final class NativeVisibilityEngine: MenuBarEngine {
         self.itemFrame = itemFrame
         self.displays = displays
         self.isLTR = isLTR
+        self.activationTimeout = activationTimeout
         isCaptureActive = captureActivity.isActive
         items.separatorItem.isVisible = false
         captureActivity.onChange = { [weak self] in
@@ -127,7 +129,7 @@ final class NativeVisibilityEngine: MenuBarEngine {
         }
 
         guard visibility.isAvailable else {
-            logUnavailableOnce("the native menu-bar visibility API is not available in this build or on this macOS")
+            NSLog("NativeVisibility: hiding unavailable: the native menu-bar visibility API is not available in this build or on this macOS")
             state = .unavailable
             return completion(.unavailable)
         }
@@ -136,14 +138,14 @@ final class NativeVisibilityEngine: MenuBarEngine {
             // hide icons the user kept visible. Not latched: it works as soon as
             // the permission is granted.
             inventory.requestAuthorization()
-            logUnavailableOnce("Accessibility permission is needed to read the menu-bar sections")
+            NSLog("NativeVisibility: hiding unavailable: Accessibility permission is needed to read the menu-bar sections")
             return completion(.unavailable)
         }
         state = .calibrating
         withLayout { [weak self] layout in
             guard let self = self else { return }
             guard let layout = layout else {
-                self.logUnavailableOnce("the arrow's position cannot be read yet")
+                NSLog("NativeVisibility: hiding unavailable: the arrow's position cannot be read yet")
                 self.state = .expanded
                 return completion(.unavailable)
             }
@@ -187,6 +189,10 @@ final class NativeVisibilityEngine: MenuBarEngine {
     // expanded snapshot instead of hiding an icon from the wrong side.
     func invalidateLayout() {
         layout = nil
+        if state == .calibrating {
+            generation += 1
+            state = .expanded
+        }
         if assertion != nil {
             releaseAssertion()
             state = .expanded
@@ -264,12 +270,23 @@ final class NativeVisibilityEngine: MenuBarEngine {
             return completion(true)
         }
         let allowed = (ownBundleIdentifier.map { [$0] } ?? []) + bundles
+        var settled = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + activationTimeout) { [weak self] in
+            guard let self = self, !settled, generation == self.generation else { return }
+            settled = true
+            // Bump generation so any late completion from this request is treated as stale.
+            self.generation += 1
+            NSLog("NativeVisibility: activation timed out after \(self.activationTimeout)s")
+            self.releaseAssertion()
+            completion(false)
+        }
         visibility.activate(allowedSystemItems: Self.systemItemsToKeep,
                             allowedBundleIdentifiers: allowed) { [weak self] result in
-            guard let self = self, generation == self.generation else {
+            guard let self = self, !settled, generation == self.generation else {
                 if case .success(let stale) = result { stale.invalidate() }
                 return
             }
+            settled = true
             switch result {
             case .success(let newAssertion) where self.captureActivity.isActive:
                 // Capture started while this was in flight.
@@ -384,12 +401,5 @@ final class NativeVisibilityEngine: MenuBarEngine {
             // An activation in flight checks capture itself; unavailable holds nothing.
             break
         }
-    }
-
-    // Logged when the reason changes, so a retried collapse does not spam.
-    private func logUnavailableOnce(_ reason: String) {
-        guard reason != lastUnavailableReason else { return }
-        lastUnavailableReason = reason
-        NSLog("NativeVisibility: hiding unavailable: \(reason)")
     }
 }

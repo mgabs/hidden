@@ -15,9 +15,28 @@ struct MenuBarExtraInfo {
   let element: AXUIElement
   let appName: String
   let appIcon: NSImage?
+  let app: NSRunningApplication?
   let title: String?
   let position: CGPoint
   let size: CGSize
+
+  init(
+    element: AXUIElement,
+    appName: String,
+    appIcon: NSImage?,
+    app: NSRunningApplication? = nil,
+    title: String?,
+    position: CGPoint,
+    size: CGSize
+  ) {
+    self.element = element
+    self.appName = appName
+    self.appIcon = appIcon
+    self.app = app
+    self.title = title
+    self.position = position
+    self.size = size
+  }
 }
 
 // MARK: - Notch Geometry
@@ -40,12 +59,10 @@ enum NotchGeometry {
   static let fallbackThresholdX: CGFloat = 972
 
   /// - Parameters:
-  ///   - screenFrame: the candidate screen's full frame (`NSScreen.frame`).
   ///   - safeAreaInsetsTop: `NSScreen.safeAreaInsets.top`; > 0 on notched Macs.
   ///   - auxiliaryTopRightAreaMinX: `NSScreen.auxiliaryTopRightArea?.minX`,
   ///     Apple's own safe-rect boundary for content right of the notch.
   static func computeBoundary(
-    screenFrame: CGRect,
     safeAreaInsetsTop: CGFloat,
     auxiliaryTopRightAreaMinX: CGFloat?
   ) -> NotchBoundary {
@@ -98,7 +115,6 @@ class NotchOverflowController: NSObject {
       auxRightMinX = nil
     }
     return NotchGeometry.computeBoundary(
-      screenFrame: screen.frame,
       safeAreaInsetsTop: safeAreaTop,
       auxiliaryTopRightAreaMinX: auxRightMinX
     )
@@ -122,15 +138,16 @@ class NotchOverflowController: NSObject {
     }
   }
 
+  private var resizedIconCache: [String: NSImage] = [:]
+
   // MARK: - Menu Building
 
   func buildOverflowMenu(
-    extras: [MenuBarExtraInfo]? = nil,
+    extras: [MenuBarExtraInfo],
     boundary: CGFloat? = nil
   ) -> NSMenu {
-    let allExtras = extras ?? getAllMenuBarExtras()
     let resolvedBoundary = boundary ?? Self.currentBoundary().overflowThresholdX
-    let (hiddenExtras, visibleExtras) = MenuBarExtraClassifier.classify(allExtras, boundary: resolvedBoundary)
+    let (hiddenExtras, visibleExtras) = MenuBarExtraClassifier.classify(extras, boundary: resolvedBoundary)
 
     let menu = NSMenu()
     menu.autoenablesItems = false
@@ -205,8 +222,15 @@ class NotchOverflowController: NSObject {
       item.title = displayTitle
     }
 
-    if let icon = info.appIcon {
-      item.image = hidden ? icon.resizedForMenu(tinted: true) : icon.resizedForMenu()
+    if let icon = info.appIcon ?? info.app?.icon {
+      let cacheKey = "\(info.app?.bundleIdentifier ?? info.appName):\(hidden)"
+      if let cached = resizedIconCache[cacheKey] {
+        item.image = cached
+      } else {
+        let resized = hidden ? icon.resizedForMenu(tinted: true) : icon.resizedForMenu()
+        resizedIconCache[cacheKey] = resized
+        item.image = resized
+      }
     }
     item.representedObject = info
     item.target = self
@@ -247,10 +271,6 @@ class NotchOverflowController: NSObject {
     }
   }
 
-  private func getAllMenuBarExtras() -> [MenuBarExtraInfo] {
-    return Self.menuBarExtras(of: Self.runningAppEntries())
-  }
-
   private static func menuBarExtras(
     of apps: [(pid: pid_t, name: String, app: NSRunningApplication)]
   ) -> [MenuBarExtraInfo] {
@@ -282,7 +302,6 @@ class NotchOverflowController: NSObject {
     ) == .success, let children = childrenRef as? [AXUIElement] else { return [] }
 
     var items: [MenuBarExtraInfo] = []
-    var cachedIcon: NSImage??
     for child in children {
       var sizeRef: AnyObject?
       AXUIElementCopyAttributeValue(child, kAXSizeAttribute as CFString, &sizeRef)
@@ -298,16 +317,11 @@ class NotchOverflowController: NSObject {
       var pos = CGPoint.zero
       if let pv = posRef { AXValueGetValue(pv as! AXValue, .cgPoint, &pos) }
 
-      let icon = cachedIcon ?? {
-        let loaded = entry.app.icon
-        cachedIcon = loaded
-        return loaded
-      }()
-
       items.append(MenuBarExtraInfo(
         element: child,
         appName: entry.name,
-        appIcon: icon,
+        appIcon: nil,
+        app: entry.app,
         title: titleRef as? String,
         position: pos,
         size: size

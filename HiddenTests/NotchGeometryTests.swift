@@ -20,7 +20,6 @@ final class NotchGeometryTests: XCTestCase {
     // Then hasNotch is false
     func test_screenWithoutSafeAreaInset_reportsNoNotch() {
         let boundary = NotchGeometry.computeBoundary(
-            screenFrame: CGRect(x: 0, y: 0, width: 1728, height: 1117),
             safeAreaInsetsTop: 0,
             auxiliaryTopRightAreaMinX: nil
         )
@@ -33,7 +32,6 @@ final class NotchGeometryTests: XCTestCase {
     // Then hasNotch is true
     func test_screenWithSafeAreaInset_reportsNotch() {
         let boundary = NotchGeometry.computeBoundary(
-            screenFrame: CGRect(x: 0, y: 0, width: 1512, height: 982),
             safeAreaInsetsTop: 32,
             auxiliaryTopRightAreaMinX: 810
         )
@@ -50,12 +48,10 @@ final class NotchGeometryTests: XCTestCase {
         // `screen.frame.width / 8`-derived value would differ between these,
         // even though the real hardware boundary here does not.
         let narrowerScreen = NotchGeometry.computeBoundary(
-            screenFrame: CGRect(x: 0, y: 0, width: 1512, height: 982),
             safeAreaInsetsTop: 32,
             auxiliaryTopRightAreaMinX: 810
         )
         let widerScreen = NotchGeometry.computeBoundary(
-            screenFrame: CGRect(x: 0, y: 0, width: 1728, height: 1117),
             safeAreaInsetsTop: 32,
             auxiliaryTopRightAreaMinX: 810
         )
@@ -69,7 +65,6 @@ final class NotchGeometryTests: XCTestCase {
     // Then it falls back to the documented default rather than 0 or a crash
     func test_notchWithoutAuxiliaryArea_fallsBackToDefaultThreshold() {
         let boundary = NotchGeometry.computeBoundary(
-            screenFrame: CGRect(x: 0, y: 0, width: 1728, height: 1117),
             safeAreaInsetsTop: 32,
             auxiliaryTopRightAreaMinX: nil
         )

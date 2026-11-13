@@ -6,7 +6,6 @@
 //  Copyright © 2019 Dwarves Foundation. All rights reserved.
 //
 
-import Foundation
 import Cocoa
 
 @IBDesignable

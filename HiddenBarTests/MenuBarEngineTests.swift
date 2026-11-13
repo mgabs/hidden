@@ -228,14 +228,15 @@ final class NativeVisibilityEngineTests: XCTestCase {
         capture = FakeCaptureActivity()
     }
 
-    private func makeEngine() -> NativeVisibilityEngine {
+    private func makeEngine(activationTimeout: TimeInterval = 2.0) -> NativeVisibilityEngine {
         let items = self.items!
         return NativeVisibilityEngine(items: items, inventory: inventory, visibility: visibility, clock: clock,
                                       captureActivity: capture,
                                       ownBundleIdentifier: "com.dwarvesv.minimalbar",
                                       itemFrame: { $0 === items.toggleItem ? separator : alwaysHiddenSeparator },
                                       displays: { [mainDisplay] },
-                                      isLTR: { true })
+                                      isLTR: { true },
+                                      activationTimeout: activationTimeout)
     }
 
     func testCollapseKeepsOnlyVisibleAppsAndSystemItems() {
@@ -611,6 +612,80 @@ final class NativeVisibilityEngineTests: XCTestCase {
         capture.set(false)
         XCTAssertFalse(collapsed.isInvalidated)
         XCTAssertEqual(visibility.requests.count, 1)
+    }
+
+    func testActivationTimeoutResetsCalibratingAndInvalidatesLateAssertion() {
+        let engine = makeEngine(activationTimeout: 0.05)
+        let timedOut = expectation(description: "collapse times out when provider never replies")
+        var results: [CollapseResult] = []
+
+        engine.collapse { result in
+            results.append(result)
+            timedOut.fulfill()
+        }
+        XCTAssertEqual(engine.state, .calibrating)
+
+        wait(for: [timedOut], timeout: 1.0)
+        XCTAssertEqual(results, [.unavailable])
+        XCTAssertEqual(engine.state, .expanded)
+
+        // A late reply from the timed-out activation must be invalidated and leave state expanded.
+        let late = visibility.succeed(0)
+        XCTAssertTrue(late.isInvalidated)
+        XCTAssertEqual(engine.state, .expanded)
+
+        // Subsequent collapse is not wedged.
+        var retryResults: [CollapseResult] = []
+        engine.collapse { retryResults.append($0) }
+        XCTAssertEqual(engine.state, .calibrating)
+        visibility.succeed(1)
+        XCTAssertEqual(retryResults, [.collapsed])
+        XCTAssertEqual(engine.state, .collapsed)
+    }
+
+    func testInvalidateLayoutWhileCalibratingResetsToExpanded() {
+        let engine = makeEngine(activationTimeout: 5.0)
+        engine.collapse { _ in }
+        XCTAssertEqual(engine.state, .calibrating)
+
+        engine.invalidateLayout()
+        XCTAssertEqual(engine.state, .expanded)
+
+        let late = visibility.succeed(0)
+        XCTAssertTrue(late.isInvalidated)
+        XCTAssertEqual(engine.state, .expanded)
+    }
+
+    func testExpandWhileCalibratingResetsToExpandedAndInvalidatesLateAssertion() {
+        let engine = makeEngine(activationTimeout: 5.0)
+        engine.collapse { _ in }
+        XCTAssertEqual(engine.state, .calibrating)
+
+        engine.expand()
+        XCTAssertEqual(engine.state, .expanded)
+
+        let late = visibility.succeed(0)
+        XCTAssertTrue(late.isInvalidated)
+        XCTAssertEqual(engine.state, .expanded)
+    }
+
+    func testSystemMenuBarClockCachesFramesAndInvalidatesOnScreenChange() {
+        var providerCalls = 0
+        let clock = SystemMenuBarClock {
+            providerCalls += 1
+            return [CGRect(x: 1600, y: 0, width: 120, height: 24)]
+        }
+        clock.onClick = { _ in }
+
+        XCTAssertEqual(clock.currentClockFrames().count, 1)
+        XCTAssertEqual(clock.currentClockFrames().count, 1)
+        XCTAssertEqual(providerCalls, 1, "warm cache must avoid repeated AX clock lookups")
+
+        NotificationCenter.default.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        XCTAssertEqual(clock.currentClockFrames().count, 1)
+        XCTAssertEqual(providerCalls, 2, "screen parameter change must invalidate cached clock frames")
+
+        clock.onClick = nil
     }
 }
 

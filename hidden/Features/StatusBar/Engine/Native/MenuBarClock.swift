@@ -43,13 +43,23 @@ final class SystemMenuBarClock: MenuBarClockProviding {
         didSet { updateMonitor() }
     }
 
+    private let clockFramesProvider: () -> [CGRect]
     private var monitor: Any?
+    private var screenObserver: NSObjectProtocol?
+    private var cachedClockFrames: [CGRect]?
     // The clock's frame when a click on it began with Notification Center closed.
     private var clickedClockFrame: CGRect?
+
+    init(clockFramesProvider: @escaping () -> [CGRect] = { SystemMenuBarClock.clocks().map(\.frame) }) {
+        self.clockFramesProvider = clockFramesProvider
+    }
 
     deinit {
         if let monitor = monitor {
             NSEvent.removeMonitor(monitor)
+        }
+        if let observer = screenObserver {
+            NotificationCenter.default.removeObserver(observer)
         }
     }
 
@@ -106,11 +116,34 @@ final class SystemMenuBarClock: MenuBarClockProviding {
             monitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp]) { [weak self] event in
                 self?.handle(event)
             }
+            screenObserver = NotificationCenter.default.addObserver(
+                forName: NSApplication.didChangeScreenParametersNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.cachedClockFrames = nil
+            }
         } else if onClick == nil, let monitor = monitor {
             NSEvent.removeMonitor(monitor)
             self.monitor = nil
+            if let observer = screenObserver {
+                NotificationCenter.default.removeObserver(observer)
+                screenObserver = nil
+            }
+            cachedClockFrames = nil
             clickedClockFrame = nil
         }
+    }
+
+    func currentClockFrames() -> [CGRect] {
+        if let cached = cachedClockFrames {
+            return cached
+        }
+        let frames = clockFramesProvider()
+        if !frames.isEmpty {
+            cachedClockFrames = frames
+        }
+        return frames
     }
 
     // Notification Center is checked when the click begins: a click on the clock
@@ -123,12 +156,12 @@ final class SystemMenuBarClock: MenuBarClockProviding {
             // ⌘-drag rearranges the bar and ⌃-click is a right click.
             guard event.modifierFlags.isDisjoint(with: [.command, .control]),
                   Self.isInMenuBar(location),
-                  let clock = Self.clocks().first(where: { $0.frame.contains(location) }),
+                  let clockFrame = currentClockFrames().first(where: { $0.contains(location) }),
                   !Self.isNotificationCenterOpen else {
                 clickedClockFrame = nil
                 return
             }
-            clickedClockFrame = clock.frame
+            clickedClockFrame = clockFrame
         case .leftMouseUp:
             defer { clickedClockFrame = nil }
             if clickedClockFrame?.contains(location) == true {
