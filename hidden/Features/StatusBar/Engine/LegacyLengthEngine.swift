@@ -42,7 +42,7 @@ final class LegacyLengthEngine: MenuBarEngine {
         // length must cover the WIDEST screen, not NSScreen.main (the focused one);
         // sizing from a narrower screen leaks hidden icons on wider displays.
         // frame.width, not visibleFrame: the menubar spans the full frame width.
-        let screenWidth = NSScreen.screens.map { $0.frame.width }.max() ?? 1728
+        let screenWidth = NSScreen.screens.max(by: { $0.frame.width < $1.frame.width })?.frame.width ?? 1728
         // Keep collapse length bounded to avoid pathological layout/memory behavior;
         // macOS enforces a hard 10,000pt maximum on NSStatusItem.length (PR #354).
         return max(500, min(screenWidth * 2, 10_000))

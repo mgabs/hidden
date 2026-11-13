@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  rails:
+    name: Quality gates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      # Skeleton: uncomment and adapt each step for your stack, then see openspec/spec-rails/TODO.md.
+
+      # - name: Set up toolchain
+      #   uses: <setup action for your language>
+
+      # - name: Unit tests
+      #   run: <test command>
+
+      # - name: Coverage (>= 95%)
+      #   run: <coverage command>
+
+      # - name: Mutation testing (>= 95% kill)
+      #   run: <mutation command>
+
+      - name: Placeholder
+        run: echo "No quality gates configured yet; see openspec/spec-rails/TODO.md"

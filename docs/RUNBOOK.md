@@ -4,6 +4,21 @@ Build, verify, and release Hidden Bar. Assumes current Xcode on macOS 13+.
 
 ## Build
 
+### Makefile shortcuts
+
+```sh
+make help     # list targets
+make build    # Release-Direct unsigned build -> build/Build/Products/Release-Direct/Hidden Bar.app
+make test     # Debug-Direct unit tests
+make install  # build and copy to /Applications/Hidden Bar.app
+make open     # build and launch
+make clean    # remove build/
+```
+
+Pass `SIGNING=""` (e.g. `make build SIGNING=""`) to use your Apple Development identity.
+
+### Direct `xcodebuild`
+
 ```sh
 # CI-style build, no signing required
 xcodebuild -project 'Hidden Bar.xcodeproj' -scheme 'Hidden Bar' \
@@ -46,7 +61,7 @@ Standard checks before any release:
 - localization tables stay parseable: `plutil -lint hidden/*.lproj/*.strings`.
 
 When testing on a machine that runs Hidden Bar daily: export the prefs domain
-first (`defaults export com.dwarvesv.minimalbar backup.plist`), quit the
+first (`defaults export com.mgabs.hiddenbar backup.plist`), quit the
 installed app, test the dev build, then re-import and relaunch.
 
 ## Release

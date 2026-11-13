@@ -15,11 +15,11 @@ import ServiceManagement
 class AppDelegate: NSObject, NSApplicationDelegate{
     
     var statusBarController = StatusBarController()
-    
+
     var hotKey: HotKey? {
         didSet {
             guard let hotKey = hotKey else { return }
-            
+
             hotKey.keyDownHandler = { [weak self] in
                 self?.statusBarController.expandCollapseIfNeeded()
             }
@@ -27,11 +27,35 @@ class AppDelegate: NSObject, NSApplicationDelegate{
     }
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
+        guard ensureSingleInstance() else { return }
         setupAutoStartApp()
         registerDefaultValues()
         setupHotKey()
         openPreferencesIfNeeded()
         detectLTRLang()
+    }
+
+    /// Hidden Bar is a menu bar utility with no visible window, so launching it a
+    /// second time looks like a no-op while silently spawning a duplicate instance.
+    /// If another instance with the same bundle ID is already running, activate it
+    /// and terminate this one instead.
+    private func ensureSingleInstance() -> Bool {
+        let current = ProcessInfo.processInfo.processIdentifier
+        let existing = NSWorkspace.shared.runningApplications.first {
+            guard $0.bundleIdentifier == Bundle.main.bundleIdentifier,
+                  $0.processIdentifier != current else { return false }
+            #if DEBUG
+            // Let a dev build run next to the installed copy; only dedupe
+            // relaunches of the same bundle path.
+            return $0.bundleURL == Bundle.main.bundleURL
+            #else
+            return true
+            #endif
+        }
+        guard let existing else { return true }
+        existing.activate(options: [.activateAllWindows])
+        NSApp.terminate(nil)
+        return false
     }
     
     func openPreferencesIfNeeded() {
@@ -54,15 +78,21 @@ class AppDelegate: NSObject, NSApplicationDelegate{
         UserDefaults.standard.set(true, forKey: migratedKey)
     }
     
+    // A plain value, separate from the side-effecting `register(defaults:)`
+    // call, so the "what are the defaults" behavior is testable without
+    // spinning up an AppDelegate (which creates real status bar items).
+    static let defaultPreferenceValues: [String: Any] = [
+        UserDefaults.Key.isAutoStart: false,
+        UserDefaults.Key.isShowPreference: true,
+        UserDefaults.Key.isAutoHide: true,
+        UserDefaults.Key.numberOfSecondForAutoHide: 10.0,
+        UserDefaults.Key.areSeparatorsHidden: false,
+        UserDefaults.Key.alwaysHiddenSectionEnabled: false,
+        UserDefaults.Key.notchOverflowEnabled: true
+    ]
+
     func registerDefaultValues() {
-         UserDefaults.standard.register(defaults: [
-            UserDefaults.Key.isAutoStart: false,
-            UserDefaults.Key.isShowPreference: true,
-            UserDefaults.Key.isAutoHide: true,
-            UserDefaults.Key.numberOfSecondForAutoHide: 10.0,
-            UserDefaults.Key.areSeparatorsHidden: false,
-            UserDefaults.Key.alwaysHiddenSectionEnabled: false
-         ])
+        UserDefaults.standard.register(defaults: AppDelegate.defaultPreferenceValues)
     }
     
     func setupHotKey() {

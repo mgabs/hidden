@@ -71,12 +71,12 @@ struct GlobalKeybindPreferences: Codable, CustomStringConvertible {
             stringBuilder += "⏎"
             return stringBuilder
         }
-        
+
         if keyCode == 51 { // delete
             stringBuilder += "⌫"
             return stringBuilder
         }
-        
+
         if keyCode == 49 { // spacer
             stringBuilder += "⎵"
             return stringBuilder
@@ -90,13 +90,7 @@ struct GlobalKeybindPreferences: Codable, CustomStringConvertible {
         if let characters = self.characters {
             stringBuilder += characters.uppercased()
         }
-        
-        return "\(stringBuilder)"
-    }
-}
 
-extension GlobalKeybindPreferences {
-    func save() {
-        
+        return "\(stringBuilder)"
     }
 }

@@ -1,0 +1,5 @@
+{
+  "stack": "auto",
+  "strict": true,
+  "testCommand": "npm test"
+}
