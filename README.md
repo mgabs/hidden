@@ -1,65 +1,82 @@
 <p align="center">
-	<img width="200" height="200" margin-right="100%" src="https://github.com/dwarvesf/hidden/blob/develop/img/icon_512%402x.png?raw=true">
-</p>
-<p align="center">
-	<a href="https://webuild.community">
-		<img src="https://raw.githubusercontent.com/webuild-community/badge/master/svg/love.svg" />
-	</a>
-	<a href="https://github.com/dwarvesf/hidden/releases/latest">
- 		<img src="https://img.shields.io/badge/download-latest-brightgreen.svg" alt="download">
-	</a>
-	<a href="https://img.shields.io/badge/platform-macOS-lightgrey.svg">
- 		<img src="https://img.shields.io/badge/platform-macOS-lightgrey.svg" alt="platform">
-	</a>
-	<a href="https://img.shields.io/badge/requirements-macOS Ventura+-ff69b4.svg">
- 		<img src="https://img.shields.io/badge/requirements-macOS Ventura+-ff69b4.svg" alt="systemrequirements">
-	</a>
+	<img width="160" height="160" src="img/icon_512@2x.png" alt="Hidden Bar">
 </p>
 
-## Hidden Bar
-Hidden Bar lets you hide menu bar items to give your Mac a cleaner look.
+# Hidden Bar
+
+[![CI](https://github.com/mgabs/hidden/actions/workflows/build.yml/badge.svg)](https://github.com/mgabs/hidden/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/mgabs/hidden)](https://github.com/mgabs/hidden/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-lightgrey.svg)](https://github.com/mgabs/hidden/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+> **Lightweight macOS menu bar manager to hide clutter, access notch-overflow items, and keep your menu bar clean.**
+
+`Hidden Bar` (`com.mgabs.hiddenbar`) is a native AppKit utility for decluttering the macOS menu bar. It supports both classic separator-length hiding on macOS 13–26 and Accessibility-backed native visibility assertions on macOS 27+, along with a Notch Overflow menu for items hidden behind the camera housing.
 
 <p align="center">
-	<img width="400" src="img/screen1.png">
-	<img width="400" src="img/screen2.png">
+	<img width="400" src="img/screen1.png" alt="Hidden Bar expanded">
+	<img width="400" src="img/screen2.png" alt="Hidden Bar collapsed">
 </p>
 
-## 🚀 Install
+---
 
-###  App Store
+## Quick Start
 
-[![AppStore](img/appstore.svg)](https://itunes.apple.com/app/hidden-bar/id1452453066)
+### Installation
 
-### Others
-
-The Hidden Bar is notarized before distributed out side App Store. It's safe to use 👍
-
-#### Using Homebrew
-
-```
-brew install --cask hiddenbar
+```bash
+# macOS (Homebrew)
+brew install --cask mgabs/tap/hidden-bar
 ```
 
-#### Manual download
+**Manual download:**
+- Download `Hidden-Bar-*.zip` from [GitHub Releases](https://github.com/mgabs/hidden/releases/latest).
+- Extract and move `Hidden Bar.app` to `/Applications`.
+- Launch Hidden Bar and `⌘` + drag the separator icon in your menu bar between the icons you want hidden and visible.
 
-- [Download latest version](https://github.com/dwarvesf/hidden/releases/latest)
-- Open and drag the app to the Applications folder.
-- Launch Hidden and drag the icon in your menu bar (hold CMD) to the right so it is between some other icons.
+### Usage
 
-## 🕹 Usage
-
-* `⌘` + drag to move the Hidden icons around in the menu bar.
-* Click the Arrow icon to hide menu bar items.
+- `⌘` + drag to position Hidden Bar separator icons in the menu bar.
+- Click the arrow icon to collapse or expand hidden menu bar items.
+- Grant **Accessibility** permission when prompted so macOS 27+ native visibility and Notch Overflow can inspect menu bar items.
 
 <p align="center">
-	<img src="img/tutorial.gif">
+	<img src="img/tutorial.gif" alt="Hidden Bar usage">
 </p>
 
-## 📚 Documentation
+---
 
-- [Manual](docs/MANUAL.md): every setting, the hidden Terminal-only options, and troubleshooting.
-- [Architecture](docs/ARCHITECTURE.md): how the hiding trick works, topology, and known limits.
-- [Maintainer runbook](docs/RUNBOOK.md): build, behavioral verification, and release process.
+## Core Capabilities
+
+- **Collapsible Menu Bar**: Hide less-used status items behind a single toggle with optional auto-collapse and hover-to-expand.
+- **Notch Overflow Access**: Inspect and trigger menu bar items pushed behind the MacBook camera notch.
+- **macOS 27+ Native Visibility**: Uses `MenuBarClientCore` visibility assertions (`NativeVisibilityEngine`) while suspending restrictions during mic/camera capture or Notification Center clock clicks.
+- **Always-Hidden Section**: Separate icons that stay tucked away unless explicitly expanded.
+
+---
+
+## Documentation
+
+- 📖 [**Manual**](docs/MANUAL.md) — Settings, hidden `defaults` options, and troubleshooting.
+- 🏗️ [**Architecture**](docs/ARCHITECTURE.md) — Hiding mechanics, topology, and known limits.
+- 🛠️ [**Maintainer Runbook**](docs/RUNBOOK.md) — Build, verification, and release workflow.
+
+---
+
+## Testing & Verification
+
+```bash
+# Run unit tests
+make test
+
+# Build Release-Direct app
+make build
+
+# Build and install to /Applications
+make install
+```
+
+---
 
 ## Architecture Blueprint
 
@@ -67,7 +84,7 @@ brew install --cask hiddenbar
 Hidden Bar is a macOS menu-bar utility (`com.mgabs.hiddenbar`) built with AppKit. On macOS ≤ 26 (and App Store builds), `LegacyLengthEngine` hides menu-bar items by inflating an `NSStatusItem` separator's length; on macOS 27+ direct builds (`HIDDENBAR_NATIVE_VISIBILITY`), `NativeVisibilityEngine` reads item positions via Accessibility and acquires a `MenuBarClientCore` visibility assertion while suspending restrictions during mic/camera capture or Notification Center clock clicks.
 
 ### Subdirectories & System Boundaries
-- **hidden**: [./hidden/README.md](./hidden/README.md) - Application entry point (`AppDelegate`), bridging header, and all feature/shared modules (`Common`, `Extensions`, `Features`, `Models`, `Views`).
+- **hidden**: [./hidden/README.md](./hidden/README.md) — Application entry point (`AppDelegate`), bridging header, and all feature/shared modules (`Common`, `Extensions`, `Features`, `Models`, `Views`).
 
 ### Global Invariants
 - `MenuBarEngineFactory.make(items:)` selects `NativeVisibilityEngine` only when `HIDDENBAR_NATIVE_VISIBILITY` is compiled in and `ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27`; otherwise it falls back to `LegacyLengthEngine`.
@@ -78,29 +95,30 @@ Hidden Bar is a macOS menu-bar utility (`com.mgabs.hiddenbar`) built with AppKit
 - Creates and mutates `NSStatusBar.system` items, reads/writes `UserDefaults.standard`, and registers/unregisters login items via `SMAppService`.
 - Queries running `.app` bundles via Accessibility IPC (`AXExtrasMenuBar`), acquires/invalidates `MBAssessmentModeAssertion` on macOS 27+ direct builds, and installs global `NSEvent` monitors for `hoverToExpand` and clock clicks.
 
-### System Verification
-- Run: `make test`
-
-## ✨<a href="https://github.com/dwarvesf/hidden/graphs/contributors">Contributors</a>
-
-This project exists thanks to all the people who contribute. Thank you guys so much 👏
-
-[![](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/images/0)](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/links/0)[![](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/images/1)](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/links/1)[![](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/images/2)](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/links/2)[![](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/images/3)](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/links/3)[![](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/images/4)](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/links/4)[![](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/images/5)](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/links/5)[![](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/images/6)](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/links/6)[![](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/images/7)](https://sourcerer.io/fame/phucledien/dwarvesf/hidden/links/7)
-
-Please read [this](CONTRIBUTING.md) before you make a contribution.
+---
 
 ## Requirements
-macOS version >= 13.0 (Ventura)
 
-Running an older macOS? The last release supporting macOS 10.13 High Sierra
-through 12 Monterey is [v1.10](https://github.com/dwarvesf/hidden/releases/tag/v1.10).
-Later versions require macOS 13 because autostart moved to the `SMAppService`
-API introduced there.
+- macOS 13.0 (Ventura) or later.
 
-## You may also like
-- [Blurred](https://github.com/dwarvesf/Blurred) - A macOS utility that helps reduce distraction by dimming your inactive noise
-- [Micro Sniff](https://github.com/dwarvesf/micro-sniff) - An ultra-light macOS utility that notify whenever your micro-device is being used
-- [VimMotion](https://github.com/dwarvesf/VimMotionPublic) Vim style shortcut for MacOS
+---
+
+## Donating & Humanitarian Support
+
+Hidden Bar is free and open-source. If you wish to express gratitude, please consider donating to humanitarian relief organizations providing food, water, medical aid, and shelter to families in Gaza and Palestine:
+
+- **[UNRWA](https://www.unrwa.org)** — UN Relief and Works Agency for Palestine Refugees
+- **[Palestine Children's Relief Fund (PCRF)](https://www.pcrf.net)**
+- **[Palestine Red Crescent Society](https://www.palestinercs.org)**
+- **[Medical Aid for Palestinians (MAP)](https://www.map.org.uk)**
+- **[Anera](https://www.anera.org)**
+- **[Médecins Sans Frontières (MSF)](https://www.msf.org)**
+- **[International Committee of the Red Cross (ICRC)](https://www.icrc.org)**
+- **[UNICEF](https://www.unicef.org)**
+- **[World Food Programme (WFP)](https://www.wfp.org)**
+
+---
+
 ## License
 
-MIT &copy; [Dwarves Foundation](https://github.com/dwarvesf)
+[MIT](LICENSE)
