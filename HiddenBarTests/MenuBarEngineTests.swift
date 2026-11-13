@@ -166,10 +166,10 @@ final class MenuBarLayoutResolverTests: XCTestCase {
 
     func testSkipsOwnSystemAndUnidentifiedItems() {
         let layout = MenuBarLayoutResolver.resolve(
-            inventory: [item("com.dwarvesv.minimalbar", x: 1100), item("com.apple.MenuBarAgent", x: 1100),
+            inventory: [item("com.mgabs.hiddenbar", x: 1100), item("com.apple.MenuBarAgent", x: 1100),
                         item(nil, x: 1100), item("com.app", x: 1100)],
             separatorFrame: separator, alwaysHiddenSeparatorFrame: nil, displays: [mainDisplay],
-            isLTR: true, excludingBundle: "com.dwarvesv.minimalbar")
+            isLTR: true, excludingBundle: "com.mgabs.hiddenbar")
         XCTAssertEqual(layout?.sections, ["com.app": .hidden])
     }
 
@@ -232,7 +232,7 @@ final class NativeVisibilityEngineTests: XCTestCase {
         let items = self.items!
         return NativeVisibilityEngine(items: items, inventory: inventory, visibility: visibility, clock: clock,
                                       captureActivity: capture,
-                                      ownBundleIdentifier: "com.dwarvesv.minimalbar",
+                                      ownBundleIdentifier: "com.mgabs.hiddenbar",
                                       itemFrame: { $0 === items.toggleItem ? separator : alwaysHiddenSeparator },
                                       displays: { [mainDisplay] },
                                       isLTR: { true },
@@ -245,7 +245,7 @@ final class NativeVisibilityEngineTests: XCTestCase {
         engine.collapse { results.append($0) }
 
         XCTAssertEqual(engine.state, .calibrating)
-        XCTAssertEqual(visibility.requests.first?.bundles, ["com.dwarvesv.minimalbar", "com.visible"])
+        XCTAssertEqual(visibility.requests.first?.bundles, ["com.mgabs.hiddenbar", "com.visible"])
         XCTAssertEqual(visibility.requests.first?.systemItems, NativeVisibilityEngine.systemItemsToKeep)
         XCTAssertFalse(items.separatorItem.isVisible, "the arrow is the boundary; no separator needed")
 
@@ -376,19 +376,19 @@ final class NativeVisibilityEngineTests: XCTestCase {
         let engine = makeEngine()
         engine.updateAlwaysHiddenSection(enabled: true, separatorHidden: true)
         // Expanded with separators hidden: everything but always-hidden is shown.
-        XCTAssertEqual(visibility.requests.last?.bundles, ["com.dwarvesv.minimalbar", "com.hidden", "com.visible"])
+        XCTAssertEqual(visibility.requests.last?.bundles, ["com.mgabs.hiddenbar", "com.hidden", "com.visible"])
         visibility.succeed(visibility.requests.count - 1)
 
         engine.collapse { _ in }
         let collapseIndex = visibility.requests.count - 1
-        XCTAssertEqual(visibility.requests[collapseIndex].bundles, ["com.dwarvesv.minimalbar", "com.visible"])
+        XCTAssertEqual(visibility.requests[collapseIndex].bundles, ["com.mgabs.hiddenbar", "com.visible"])
         let collapsed = visibility.succeed(collapseIndex)
 
         var newIsActiveWhenOldDropped = false
         collapsed.onInvalidate = { newIsActiveWhenOldDropped = true }
         engine.expand()
         let expandIndex = visibility.requests.count - 1
-        XCTAssertEqual(visibility.requests[expandIndex].bundles, ["com.dwarvesv.minimalbar", "com.hidden", "com.visible"])
+        XCTAssertEqual(visibility.requests[expandIndex].bundles, ["com.mgabs.hiddenbar", "com.hidden", "com.visible"])
         XCTAssertFalse(collapsed.isInvalidated, "the old restriction stays until the new one is active")
         visibility.succeed(expandIndex)
         XCTAssertTrue(newIsActiveWhenOldDropped)
@@ -404,7 +404,7 @@ final class NativeVisibilityEngineTests: XCTestCase {
         inventory.items = [item("com.visible", x: 100)]
         engine.collapse { _ in }
         XCTAssertEqual(inventory.snapshots, snapshotsBefore)
-        XCTAssertEqual(visibility.requests.last?.bundles, ["com.dwarvesv.minimalbar", "com.visible"])
+        XCTAssertEqual(visibility.requests.last?.bundles, ["com.mgabs.hiddenbar", "com.visible"])
     }
 
     func testExpandDuringActivationDropsTheLateResult() {
@@ -497,7 +497,7 @@ final class NativeVisibilityEngineTests: XCTestCase {
         clock.click()
         XCTAssertTrue(expanded.isInvalidated)
         clock.presses[0].completion()
-        XCTAssertEqual(visibility.requests.last?.bundles, ["com.dwarvesv.minimalbar", "com.hidden", "com.visible"])
+        XCTAssertEqual(visibility.requests.last?.bundles, ["com.mgabs.hiddenbar", "com.hidden", "com.visible"])
     }
 
     func testExpandDuringAClockPressIsNotUndone() {
@@ -568,7 +568,7 @@ final class NativeVisibilityEngineTests: XCTestCase {
         capture.set(false)
         XCTAssertEqual(inventory.snapshots, snapshotsBefore + 1)
         XCTAssertEqual(visibility.requests.count, 2)
-        XCTAssertEqual(visibility.requests.last?.bundles, ["com.dwarvesv.minimalbar", "com.moved"])
+        XCTAssertEqual(visibility.requests.last?.bundles, ["com.mgabs.hiddenbar", "com.moved"])
         let restored = visibility.succeed(1)
         XCTAssertFalse(restored.isInvalidated)
         XCTAssertEqual(engine.state, .collapsed)
@@ -588,7 +588,7 @@ final class NativeVisibilityEngineTests: XCTestCase {
         XCTAssertEqual(visibility.requests.count, requestsWhileCapturing, "nothing is hidden while capturing, not even always-hidden")
 
         capture.set(false)
-        XCTAssertEqual(visibility.requests.last?.bundles, ["com.dwarvesv.minimalbar", "com.hidden", "com.visible"])
+        XCTAssertEqual(visibility.requests.last?.bundles, ["com.mgabs.hiddenbar", "com.hidden", "com.visible"])
     }
 
     func testCaptureStartingDuringActivationDropsTheResultButStillCollapses() {

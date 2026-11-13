@@ -1,7 +1,7 @@
 # hidden
 
 ## Overview
-Main application target for Hidden Bar (`com.dwarvesv.minimalbar`), bootstrapping the app lifecycle, global hotkey, single-instance guard, login-item migration, and menu-bar status controller.
+Main application target for Hidden Bar (`com.mgabs.hiddenbar`), bootstrapping the app lifecycle, global hotkey, single-instance guard, login-item migration, and menu-bar status controller.
 
 ## Interface
 - `AppDelegate.swift:AppDelegate` — `@NSApplicationMain` delegate owning `statusBarController: StatusBarController` and `hotKey: HotKey?`.

@@ -61,7 +61,7 @@ Standard checks before any release:
 - localization tables stay parseable: `plutil -lint hidden/*.lproj/*.strings`.
 
 When testing on a machine that runs Hidden Bar daily: export the prefs domain
-first (`defaults export com.dwarvesv.minimalbar backup.plist`), quit the
+first (`defaults export com.mgabs.hiddenbar backup.plist`), quit the
 installed app, test the dev build, then re-import and relaunch.
 
 ## Release

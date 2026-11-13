@@ -64,7 +64,7 @@ brew install --cask hiddenbar
 ## Architecture Blueprint
 
 ### System Overview
-Hidden Bar is a macOS menu-bar utility (`com.dwarvesv.minimalbar`) built with AppKit. On macOS ≤ 26 (and App Store builds), `LegacyLengthEngine` hides menu-bar items by inflating an `NSStatusItem` separator's length; on macOS 27+ direct builds (`HIDDENBAR_NATIVE_VISIBILITY`), `NativeVisibilityEngine` reads item positions via Accessibility and acquires a `MenuBarClientCore` visibility assertion while suspending restrictions during mic/camera capture or Notification Center clock clicks.
+Hidden Bar is a macOS menu-bar utility (`com.mgabs.hiddenbar`) built with AppKit. On macOS ≤ 26 (and App Store builds), `LegacyLengthEngine` hides menu-bar items by inflating an `NSStatusItem` separator's length; on macOS 27+ direct builds (`HIDDENBAR_NATIVE_VISIBILITY`), `NativeVisibilityEngine` reads item positions via Accessibility and acquires a `MenuBarClientCore` visibility assertion while suspending restrictions during mic/camera capture or Notification Center clock clicks.
 
 ### Subdirectories & System Boundaries
 - **hidden**: [./hidden/README.md](./hidden/README.md) - Application entry point (`AppDelegate`), bridging header, and all feature/shared modules (`Common`, `Extensions`, `Features`, `Models`, `Views`).

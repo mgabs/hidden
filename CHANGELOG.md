@@ -23,7 +23,7 @@ Requires macOS 13 Ventura or later. (Pre-Ventura users: stay on
 [v1.10](https://github.com/dwarvesf/hidden/releases/tag/v1.10).)
 
 ### Added
-- Opt-in hover-to-expand: set `defaults write com.dwarvesv.minimalbar hoverToExpand -bool true` to expand the bar when the pointer dwells in the menu bar.
+- Opt-in hover-to-expand: set `defaults write com.mgabs.hiddenbar hoverToExpand -bool true` to expand the bar when the pointer dwells in the menu bar.
 - Right-clicking the expand/collapse arrow now opens the same context menu as the separator, so Preferences is reachable from the control you already click.
 
 ### Fixed

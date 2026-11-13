@@ -46,7 +46,7 @@ final class MenuBarLayoutResolverTests: XCTestCase {
                                                                  alwaysHiddenSeparatorFrame: nil,
                                                                  displays: [mainDisplay],
                                                                  isLTR: true,
-                                                                 excludingBundle: "com.dwarvesv.minimalbar"))
+                                                                 excludingBundle: "com.mgabs.hiddenbar"))
 
         XCTAssertEqual(layout.sections["com.apple.systemuiserver"], .visible,
                        "a SystemUIServer Menu Extra right of the arrow must resolve visible")
@@ -65,7 +65,7 @@ final class MenuBarLayoutResolverTests: XCTestCase {
                                                                  alwaysHiddenSeparatorFrame: nil,
                                                                  displays: [mainDisplay],
                                                                  isLTR: true,
-                                                                 excludingBundle: "com.dwarvesv.minimalbar"))
+                                                                 excludingBundle: "com.mgabs.hiddenbar"))
 
         XCTAssertEqual(layout.sections["com.apple.systemuiserver"], .hidden,
                        "a SystemUIServer Menu Extra left of the arrow must resolve hidden")
@@ -84,7 +84,7 @@ final class MenuBarLayoutResolverTests: XCTestCase {
                                                                  alwaysHiddenSeparatorFrame: nil,
                                                                  displays: [mainDisplay],
                                                                  isLTR: true,
-                                                                 excludingBundle: "com.dwarvesv.minimalbar"))
+                                                                 excludingBundle: "com.mgabs.hiddenbar"))
 
         XCTAssertNil(layout.sections["com.apple.controlcenter"],
                      "a Control Center item must stay out of the layout")
@@ -105,7 +105,7 @@ final class MenuBarLayoutResolverTests: XCTestCase {
                                                                  alwaysHiddenSeparatorFrame: nil,
                                                                  displays: [mainDisplay],
                                                                  isLTR: true,
-                                                                 excludingBundle: "com.dwarvesv.minimalbar"))
+                                                                 excludingBundle: "com.mgabs.hiddenbar"))
 
         XCTAssertEqual(layout.sections["com.apple.systemuiserver"], .visible,
                        "the most visible item must win, or a kept-visible extra could be hidden by a sibling")
@@ -126,7 +126,7 @@ final class MenuBarLayoutResolverTests: XCTestCase {
                                                                  alwaysHiddenSeparatorFrame: alwaysHiddenSeparator,
                                                                  displays: [mainDisplay],
                                                                  isLTR: true,
-                                                                 excludingBundle: "com.dwarvesv.minimalbar"))
+                                                                 excludingBundle: "com.mgabs.hiddenbar"))
 
         XCTAssertEqual(layout.sections["com.apple.systemuiserver"], .alwaysHidden,
                        "a SystemUIServer Menu Extra left of the always-hidden separator must resolve always hidden")
@@ -145,7 +145,7 @@ final class MenuBarLayoutResolverTests: XCTestCase {
                                                                  alwaysHiddenSeparatorFrame: nil,
                                                                  displays: [mainDisplay],
                                                                  isLTR: false,
-                                                                 excludingBundle: "com.dwarvesv.minimalbar"))
+                                                                 excludingBundle: "com.mgabs.hiddenbar"))
 
         XCTAssertEqual(layout.sections["com.apple.systemuiserver"], .visible,
                        "in RTL the visible side flips, so left of the arrow must resolve visible")

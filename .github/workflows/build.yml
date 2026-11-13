@@ -1,12 +1,13 @@
-name: Build
+name: Build & Release
 
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -23,12 +24,57 @@ jobs:
       - name: Build application
         run: make build
 
-      - name: Archive app bundle
-        run: ditto -c -k --sequesterRsrc --keepParent "build/Build/Products/Release-Direct/Hidden Bar.app" "build/Hidden-Bar-Direct.app.zip"
+      - name: Resolve version and package zip
+        id: pkg
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' 'build/Build/Products/Release-Direct/Hidden Bar.app/Contents/Info.plist')"
+          fi
+          ZIP_NAME="Hidden-Bar-${VERSION}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "build/Build/Products/Release-Direct/Hidden Bar.app" "build/${ZIP_NAME}"
+          SHA256="$(shasum -a 256 "build/${ZIP_NAME}" | awk '{print $1}')"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "zip_name=${ZIP_NAME}" >> "$GITHUB_OUTPUT"
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: Hidden-Bar-Direct
-          path: build/Hidden-Bar-Direct.app.zip
+          path: build/${{ steps.pkg.outputs.zip_name }}
           if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.pkg.outputs.version }}
+          name: v${{ steps.pkg.outputs.version }}
+          files: build/${{ steps.pkg.outputs.zip_name }}
+          generate_release_notes: true
+
+      - name: Update Homebrew Tap Cask
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && env.TAP_TOKEN != ''
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ steps.pkg.outputs.version }}
+          SHA256: ${{ steps.pkg.outputs.sha256 }}
+        run: |
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/mgabs/homebrew-tap.git" homebrew-tap
+          cd homebrew-tap
+          ruby -e '
+            path = "Casks/hidden-bar.rb"
+            text = File.read(path)
+            text.sub!(/version "[^"]+"/, "version \"#{ENV.fetch("VERSION")}\"")
+            text.sub!(/sha256 "[^"]+"/, "sha256 \"#{ENV.fetch("SHA256")}\"")
+            File.write(path, text)
+          '
+          if ! git diff --quiet -- Casks/hidden-bar.rb; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add Casks/hidden-bar.rb
+            git commit -m "chore(hidden-bar): bump to ${VERSION}"
+            git push
+          fi

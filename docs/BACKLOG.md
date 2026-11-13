@@ -32,9 +32,8 @@ math, collapse state machine) are HIGH RISK and require a mandatory review-team 
   com.apple.axserver`, so the sections cannot be read even with Accessibility granted
   (measured 2026-09-18). Options: a user-picked list of visible apps instead of ⌘-drag
   (no Accessibility, still private API), or a public mechanism if Apple ships one.
-- **Direct build bundle id.** Tested as `com.dwarvesv.minimalbar.direct`; decide whether
-  release keeps `com.dwarvesv.minimalbar` (shared prefs, cannot coexist with the App
-  Store copy) or ships separately.
+- **Direct build bundle id.** Rebranded to `com.mgabs.hiddenbar` (clean break from
+  upstream `com.dwarvesv.minimalbar` so prefs and TCC entries do not collide).
 - **Tutorial text** still describes the `|` separator; the direct build on 27 uses the
   arrow as the boundary. Needs a per-build string.
 - **Adaptive-width experiment** (`fix/macos27-adaptive-engine`, local only): calibrating

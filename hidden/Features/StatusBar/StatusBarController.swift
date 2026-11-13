@@ -110,7 +110,7 @@ class StatusBarController: MenuBarItemProvider {
         }
     }
 
-    // Opt-in via `defaults write com.dwarvesv.minimalbar hoverToExpand -bool true`.
+    // Opt-in via `defaults write com.mgabs.hiddenbar hoverToExpand -bool true`.
     // No monitor is installed at all unless the pref is true at launch.
     private func setupHoverToExpandIfEnabled() {
         guard Preferences.hoverToExpand else { return }
