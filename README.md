@@ -61,6 +61,26 @@ brew install --cask hiddenbar
 - [Architecture](docs/ARCHITECTURE.md): how the hiding trick works, topology, and known limits.
 - [Maintainer runbook](docs/RUNBOOK.md): build, behavioral verification, and release process.
 
+## Architecture Blueprint
+
+### System Overview
+Hidden Bar is a macOS menu-bar utility (`com.dwarvesv.minimalbar`) built with AppKit. On macOS ≤ 26 (and App Store builds), `LegacyLengthEngine` hides menu-bar items by inflating an `NSStatusItem` separator's length; on macOS 27+ direct builds (`HIDDENBAR_NATIVE_VISIBILITY`), `NativeVisibilityEngine` reads item positions via Accessibility and acquires a `MenuBarClientCore` visibility assertion while suspending restrictions during mic/camera capture or Notification Center clock clicks.
+
+### Subdirectories & System Boundaries
+- **hidden**: [./hidden/README.md](./hidden/README.md) - Application entry point (`AppDelegate`), bridging header, and all feature/shared modules (`Common`, `Extensions`, `Features`, `Models`, `Views`).
+
+### Global Invariants
+- `MenuBarEngineFactory.make(items:)` selects `NativeVisibilityEngine` only when `HIDDENBAR_NATIVE_VISIBILITY` is compiled in and `ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27`; otherwise it falls back to `LegacyLengthEngine`.
+- `NativeVisibilityEngine` and `NotchOverflowController` fail open (no hiding / no scan) when Accessibility permission (`AXIsProcessTrusted()`) is missing.
+- Only one `Hidden Bar` instance per bundle runs at a time (`AppDelegate.ensureSingleInstance()`).
+
+### Global Side Effects
+- Creates and mutates `NSStatusBar.system` items, reads/writes `UserDefaults.standard`, and registers/unregisters login items via `SMAppService`.
+- Queries running `.app` bundles via Accessibility IPC (`AXExtrasMenuBar`), acquires/invalidates `MBAssessmentModeAssertion` on macOS 27+ direct builds, and installs global `NSEvent` monitors for `hoverToExpand` and clock clicks.
+
+### System Verification
+- Run: `make test`
+
 ## ✨<a href="https://github.com/dwarvesf/hidden/graphs/contributors">Contributors</a>
 
 This project exists thanks to all the people who contribute. Thank you guys so much 👏
