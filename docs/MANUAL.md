@@ -24,9 +24,42 @@ section is enabled.
   Accessibility) to see where your icons are. Without it the bar stays
   expanded.
 - Hiding is per app: an app with several icons hides or shows them together.
-- macOS's own items (clock, Wi-Fi, Sound, Control Center) always stay visible.
+- These macOS items always stay visible: clock, Control Center, Wi-Fi,
+  Bluetooth, Sound, Battery, Display, Keyboard and Screen Mirroring.
+- With more than one display, an app stays visible if it is on the arrow's
+  visible side on **any** display. If Hidden Bar cannot read a complete display
+  layout after a monitor change, wake, or app launch, it leaves the bar expanded
+  until it can safely read it again.
 - Run Hidden Bar from `/Applications`; macOS only recognizes that copy as
   Hidden Bar, and a copy elsewhere hides its own arrow.
+- Native hiding also blocks Notification Center. Clicking the clock temporarily
+  lifts that restriction, replays a single click, then restores the same hidden
+  sections once the panel appears (with a bounded timeout). Hidden icons can
+  briefly appear. Clicking an already-open panel's clock is left alone so it
+  closes normally. If the clicked clock cannot be located, no click is replayed
+  on another display.
+
+#### While collapsed (macOS limitation, #437)
+
+macOS 27 offers this kind of hiding only as part of its exam-lockdown
+(assessment) mode, and turns on that mode's other restrictions too. Hidden Bar
+cannot opt out of them. While the arrow is collapsed:
+
+- **Now Playing and Live Activities are hidden**, even if you keep the app that
+  is playing to the right of the arrow.
+- **Clicking the clock does not open Notification Center.** Swipe left from the
+  right edge of the trackpad with two fingers instead, or expand the arrow first.
+- **Recording indicators:** macOS hides the menu-bar indicator that names the
+  app using the microphone or camera (the orange or green capsule). The small
+  colored dot in the top-right corner of the screen still shows. To keep the
+  capsule too, Hidden Bar stops hiding and shows the whole bar as soon as any
+  app starts using the microphone or a camera, and resumes when that stops.
+  The arrow keeps its collapsed look in the meantime.
+- **Screen recording: not covered.** macOS offers no public way to tell that
+  another app is recording the screen, so Hidden Bar keeps hiding. The purple
+  dot in the screen corner still shows.
+
+Expanding the arrow ends all of this immediately.
 
 ## Preferences window
 
@@ -78,7 +111,7 @@ To undo any of them: `defaults delete com.dwarvesv.minimalbar <key>`.
 
 | Symptom | Fix |
 |---|---|
-| Icons I want visible got hidden after an update | ⌘-drag them to the right of the separator |
+| Icons I want visible got hidden after an update | On macOS 27 direct builds, ⌘-drag them to the arrow's right; on earlier builds, drag them right of the separator |
 | Login item missing after denying it once | System Settings > General > Login Items: re-enable Hidden Bar, then toggle the pref off/on |
 | A ghost "LauncherApplication" login item from old versions | Launch the current version once; it deauthorizes the legacy item automatically |
 | App language stuck | See the `AppleLanguages` command above, or System Settings > General > Language & Region > Applications |
