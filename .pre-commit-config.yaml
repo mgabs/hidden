@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  - repo: local
+    hooks:
+      - id: branch-protection
+        name: spec-rails branch protection
+        entry: >-
+          sh -c 'branch=$(git branch --show-current 2>/dev/null || echo ""); if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then echo "ERROR: Direct commits to $branch are forbidden by Spec-Rails workflow." >&2; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+      # Project-specific test hook tailored to detected stack (auto)
+      - id: test
+        name: test suite
+        entry: make test
+        language: system
+        pass_filenames: false

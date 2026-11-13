@@ -1,4 +1,3 @@
-
 # Created by https://www.gitignore.io/api/macos,swift
 # Edit at https://www.gitignore.io/?templates=macos,swift
 
@@ -137,3 +136,7 @@ DerivedData/
 /docs/specs/
 /docs/implementation-notes/
 /.planning/
+.serena/
+.lgtm/
+
+.worktrees/

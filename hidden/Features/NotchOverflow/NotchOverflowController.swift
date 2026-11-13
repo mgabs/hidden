@@ -16,7 +16,6 @@ struct MenuBarExtraInfo {
   let appName: String
   let appIcon: NSImage?
   let title: String?
-  let pid: pid_t
   let position: CGPoint
   let size: CGSize
 }
@@ -112,11 +111,14 @@ class NotchOverflowController: NSObject {
   /// Show overflow menu anchored to a status item (called from StatusBarController)
   func showOverflowMenuFromSeparator(near item: NSStatusItem) {
     guard ensureAccessibility() else { return }
-    let menu = buildOverflowMenu()
-    item.menu = menu
-    item.button?.performClick(nil)
-    DispatchQueue.main.async {
-      item.menu = nil
+    fetchMenuBarExtras { [weak self, weak item] extras in
+      guard let self = self, let item = item else { return }
+      let menu = self.buildOverflowMenu(extras: extras)
+      item.menu = menu
+      item.button?.performClick(nil)
+      DispatchQueue.main.async {
+        item.menu = nil
+      }
     }
   }
 
@@ -228,53 +230,90 @@ class NotchOverflowController: NSObject {
 
   // MARK: - AX Enumeration
 
-  private func getAllMenuBarExtras() -> [MenuBarExtraInfo] {
-    var results: [MenuBarExtraInfo] = []
+  private static let axMessagingTimeout: Float = 0.1
+
+  private static func runningAppEntries() -> [(pid: pid_t, name: String, app: NSRunningApplication)] {
     let myPID = ProcessInfo.processInfo.processIdentifier
+    return NSWorkspace.shared.runningApplications
+      .filter { $0.processIdentifier != myPID && $0.bundleURL?.pathExtension == "app" }
+      .map { (pid: $0.processIdentifier, name: $0.localizedName ?? "Unknown", app: $0) }
+  }
 
-    for app in NSWorkspace.shared.runningApplications {
-      if app.processIdentifier == myPID { continue }
-
-      let axApp = AXUIElementCreateApplication(app.processIdentifier)
-      var extrasRef: AnyObject?
-      let err = AXUIElementCopyAttributeValue(
-        axApp, "AXExtrasMenuBar" as CFString, &extrasRef)
-      guard err == .success else { continue }
-
-      var childrenRef: AnyObject?
-      let childErr = AXUIElementCopyAttributeValue(
-        extrasRef as! AXUIElement,
-        kAXChildrenAttribute as CFString, &childrenRef)
-      guard childErr == .success,
-        let children = childrenRef as? [AXUIElement]
-      else { continue }
-
-      for child in children {
-        var titleRef: AnyObject?
-        AXUIElementCopyAttributeValue(child, kAXTitleAttribute as CFString, &titleRef)
-
-        var posRef: AnyObject?
-        AXUIElementCopyAttributeValue(child, kAXPositionAttribute as CFString, &posRef)
-        var pos = CGPoint.zero
-        if let pv = posRef { AXValueGetValue(pv as! AXValue, .cgPoint, &pos) }
-
-        var sizeRef: AnyObject?
-        AXUIElementCopyAttributeValue(child, kAXSizeAttribute as CFString, &sizeRef)
-        var size = CGSize.zero
-        if let sv = sizeRef { AXValueGetValue(sv as! AXValue, .cgSize, &size) }
-
-        results.append(MenuBarExtraInfo(
-          element: child,
-          appName: app.localizedName ?? "Unknown",
-          appIcon: app.icon,
-          title: titleRef as? String,
-          pid: app.processIdentifier,
-          position: pos,
-          size: size
-        ))
-      }
+  private func fetchMenuBarExtras(completion: @escaping ([MenuBarExtraInfo]) -> Void) {
+    let apps = Self.runningAppEntries()
+    DispatchQueue.global(qos: .userInitiated).async {
+      let extras = Self.menuBarExtras(of: apps)
+      DispatchQueue.main.async { completion(extras) }
     }
-    return results
+  }
+
+  private func getAllMenuBarExtras() -> [MenuBarExtraInfo] {
+    return Self.menuBarExtras(of: Self.runningAppEntries())
+  }
+
+  private static func menuBarExtras(
+    of apps: [(pid: pid_t, name: String, app: NSRunningApplication)]
+  ) -> [MenuBarExtraInfo] {
+    var perApp = [[MenuBarExtraInfo]](repeating: [], count: apps.count)
+    let lock = NSLock()
+    DispatchQueue.concurrentPerform(iterations: apps.count) { index in
+      let found = menuBarExtras(of: apps[index])
+      lock.lock()
+      perApp[index] = found
+      lock.unlock()
+    }
+    return perApp.flatMap { $0 }
+  }
+
+  private static func menuBarExtras(
+    of entry: (pid: pid_t, name: String, app: NSRunningApplication)
+  ) -> [MenuBarExtraInfo] {
+    let axApp = AXUIElementCreateApplication(entry.pid)
+    AXUIElementSetMessagingTimeout(axApp, axMessagingTimeout)
+    var extrasRef: AnyObject?
+    guard AXUIElementCopyAttributeValue(axApp, "AXExtrasMenuBar" as CFString, &extrasRef) == .success,
+          let extrasBar = extrasRef else { return [] }
+
+    var childrenRef: AnyObject?
+    guard AXUIElementCopyAttributeValue(
+      extrasBar as! AXUIElement,
+      kAXChildrenAttribute as CFString,
+      &childrenRef
+    ) == .success, let children = childrenRef as? [AXUIElement] else { return [] }
+
+    var items: [MenuBarExtraInfo] = []
+    var cachedIcon: NSImage??
+    for child in children {
+      var sizeRef: AnyObject?
+      AXUIElementCopyAttributeValue(child, kAXSizeAttribute as CFString, &sizeRef)
+      var size = CGSize.zero
+      if let sv = sizeRef { AXValueGetValue(sv as! AXValue, .cgSize, &size) }
+      guard size.width > 0, size.height > 0 else { continue }
+
+      var titleRef: AnyObject?
+      AXUIElementCopyAttributeValue(child, kAXTitleAttribute as CFString, &titleRef)
+
+      var posRef: AnyObject?
+      AXUIElementCopyAttributeValue(child, kAXPositionAttribute as CFString, &posRef)
+      var pos = CGPoint.zero
+      if let pv = posRef { AXValueGetValue(pv as! AXValue, .cgPoint, &pos) }
+
+      let icon = cachedIcon ?? {
+        let loaded = entry.app.icon
+        cachedIcon = loaded
+        return loaded
+      }()
+
+      items.append(MenuBarExtraInfo(
+        element: child,
+        appName: entry.name,
+        appIcon: icon,
+        title: titleRef as? String,
+        position: pos,
+        size: size
+      ))
+    }
+    return items
   }
 
 }

@@ -9,7 +9,7 @@
 import AppKit
 
 class StatusBarController: MenuBarItemProvider {
-    
+
     //MARK: - Variables
     private var timer:Timer? = nil
 
@@ -21,41 +21,51 @@ class StatusBarController: MenuBarItemProvider {
 
     //MARK: - Notch Overflow
     private var notchOverflowController = NotchOverflowController()
-    
+
     var toggleItem: NSStatusItem { btnExpandCollapse }
     var separatorItem: NSStatusItem { btnSeparate }
     var alwaysHiddenItem: NSStatusItem? { btnAlwaysHidden }
-    
+
     // How hiding is achieved (separator lengths) lives in the engine; this class
     // owns the items, the UI, and when to collapse or expand.
     private lazy var menuBarEngine: MenuBarEngine = MenuBarEngineFactory.make(items: self)
-    
+
     private let imgIconLine = NSImage(named:NSImage.Name("ic_line"))
-    
+
     private var isCollapsed: Bool {
         return menuBarEngine.state == .collapsed
     }
-    
+
     private var isBtnAlwaysHiddenValidPosition: Bool {
         if !Preferences.alwaysHiddenSectionEnabled { return true }
         return menuBarEngine.isAlwaysHiddenSeparatorPlaced
     }
-    
+
     private var isToggle = false
 
     private var hoverMonitor: Any?
     private var hoverDwellTimer: Timer?
+    private var cachedMenuBarFrames: [CGRect]?
 
     // True while the pointer sits in any screen's menubar band (the strip between
     // visibleFrame.maxY and frame.maxY, which is the menubar's exact height there).
     // On fullscreen spaces the menubar is hidden and the band collapses to ~zero,
     // so this returns false there: intentional, no visible menubar = no deferral.
     private var isMouseInMenuBar: Bool {
+        let frames = cachedMenuBarFrames ?? {
+            let computed = NSScreen.screens.map { screen in
+                CGRect(
+                    x: screen.frame.minX,
+                    y: screen.visibleFrame.maxY,
+                    width: screen.frame.width,
+                    height: max(0, screen.frame.maxY - screen.visibleFrame.maxY)
+                )
+            }
+            cachedMenuBarFrames = computed
+            return computed
+        }()
         let mouse = NSEvent.mouseLocation
-        return NSScreen.screens.contains { screen in
-            mouse.x >= screen.frame.minX && mouse.x <= screen.frame.maxX
-                && mouse.y >= screen.visibleFrame.maxY && mouse.y <= screen.frame.maxY
-        }
+        return frames.contains { $0.contains(mouse) }
     }
 
     // The preferences window is an ordinary app window, not in the menu bar, so
@@ -67,7 +77,7 @@ class StatusBarController: MenuBarItemProvider {
     private var isPreferencesWindowVisible: Bool {
         return PreferencesWindowController.isVisible
     }
-    
+
     //MARK: - Methods
     init() {
         setupUI()
@@ -121,8 +131,9 @@ class StatusBarController: MenuBarItemProvider {
             }
         }
     }
-    
+
     @objc private func handleScreenParametersChanged() {
+        cachedMenuBarFrames = nil
         invalidateNativeLayoutAfterEnvironmentChange()
     }
 
@@ -143,7 +154,7 @@ class StatusBarController: MenuBarItemProvider {
             menuBarEngine.updateAlwaysHiddenSection(enabled: Preferences.alwaysHiddenSectionEnabled, separatorHidden: true)
         }
     }
-    
+
     private func restoreRemovedStatusItems() {
         // Cmd-dragging a status item off the bar is persisted by macOS via
         // autosaveName, leaving the app running but unreachable. These items are
@@ -166,15 +177,15 @@ class StatusBarController: MenuBarItemProvider {
         if let button = btnExpandCollapse.button {
             button.image = Assets.collapseImage
             button.target = self
-            
+
             button.action = #selector(self.btnExpandCollapsePressed(sender:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
-        
+
         btnExpandCollapse.autosaveName = "hiddenbar_expandcollapse";
         btnSeparate.autosaveName = "hiddenbar_separate";
     }
-    
+
     @objc func btnExpandCollapsePressed(sender: NSStatusBarButton) {
         let event = NSApp.currentEvent
         // AXPress synthesis carries no NSEvent; the resolver maps nil to .toggle
@@ -226,33 +237,33 @@ class StatusBarController: MenuBarItemProvider {
         let menu = getContextMenu()
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: 0), in: button)
     }
-    
+
     func showHideSeparatorsAndAlwayHideArea() {
         Preferences.areSeparatorsHidden ? self.showSeparators() : self.hideSeparators()
-        
+
         if self.isCollapsed {self.expandMenubar()}
     }
-    
+
     private func showSeparators() {
         Preferences.areSeparatorsHidden = false
-        
+
         if !self.isCollapsed {
             menuBarEngine.expand()
         }
         menuBarEngine.updateAlwaysHiddenSection(enabled: Preferences.alwaysHiddenSectionEnabled, separatorHidden: false)
     }
-    
+
     private func hideSeparators() {
         guard self.isBtnAlwaysHiddenValidPosition else {return}
-        
+
         Preferences.areSeparatorsHidden = true
-        
+
         if !self.isCollapsed {
             menuBarEngine.expand()
         }
         menuBarEngine.updateAlwaysHiddenSection(enabled: Preferences.alwaysHiddenSectionEnabled, separatorHidden: true)
     }
-    
+
     func expandCollapseIfNeeded() {
         //prevented rapid click cause icon show many in Dock
         if isToggle {return}
@@ -262,7 +273,7 @@ class StatusBarController: MenuBarItemProvider {
             self?.isToggle = false
         }
     }
-    
+
     private func collapseMenuBar() {
         guard menuBarEngine.isArrangementValid && !self.isCollapsed else {
             autoCollapseIfNeeded()
@@ -309,14 +320,14 @@ class StatusBarController: MenuBarItemProvider {
             button.image = Assets.collapseImage
         }
         autoCollapseIfNeeded()
-        
+
         if Preferences.useFullStatusBarOnExpandEnabled {
             NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
-            
+
         }
     }
-    
+
     // Expand/collapse skips the policy change when the option is off, so sync it on toggle.
     @objc private func syncActivationPolicyWithFullStatusBar() {
         let wantsRegular = Preferences.useFullStatusBarOnExpandEnabled && !isCollapsed
@@ -354,7 +365,7 @@ class StatusBarController: MenuBarItemProvider {
             }
         }
     }
-    
+
     // Built fresh on every call (see showContextMenu(from:)), so every field
     // below reflects state as of THIS presentation - no separate "patch the
     // title after the fact" step is needed for the auto-collapse item.
@@ -387,7 +398,7 @@ class StatusBarController: MenuBarItemProvider {
     @objc func updateAutoHide() {
         autoCollapseIfNeeded()
     }
-    
+
     @objc func openPreferenceViewControllerIfNeeded() {
         Util.showPrefWindow()
     }
@@ -395,7 +406,7 @@ class StatusBarController: MenuBarItemProvider {
     @objc func showNotchOverflow() {
         notchOverflowController.showOverflowMenuFromSeparator(near: btnExpandCollapse)
     }
-    
+
     @objc func toggleAutoHide() {
         Preferences.isAutoHide.toggle()
     }

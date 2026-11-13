@@ -9,14 +9,23 @@
 import Foundation
 
 extension Date {
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE dd MMM"
+        return formatter
+    }()
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "hh:mm a"
+        return formatter
+    }()
+
     static func dateString() -> String {
-        let dateFormater = DateFormatter()
-        dateFormater.dateFormat = "EEE dd MMM"
-        return dateFormater.string(from: Date())
+        return dateFormatter.string(from: Date())
     }
+
     static func timeString() -> String {
-        let dateFormater = DateFormatter()
-        dateFormater.dateFormat = "hh:mm a"
-        return dateFormater.string(from: Date())
+        return timeFormatter.string(from: Date())
     }
 }

@@ -7,7 +7,6 @@ private func makeExtra(appName: String, x: CGFloat, width: CGFloat = 22, height:
         appName: appName,
         appIcon: nil,
         title: title,
-        pid: 0,
         position: CGPoint(x: x, y: 0),
         size: CGSize(width: width, height: height)
     )

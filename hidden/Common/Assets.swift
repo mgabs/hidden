@@ -9,18 +9,14 @@
 import AppKit
 
 struct Assets {
+    private static let icExpand = NSImage(named: NSImage.Name("ic_expand"))
+    private static let icCollapse = NSImage(named: NSImage.Name("ic_collapse"))
+
     static var expandImage: NSImage? {
-        if (Constant.isUsingLTRLanguage) {
-            return NSImage(named: NSImage.Name("ic_expand"))
-        } else {
-            return NSImage(named: NSImage.Name("ic_collapse"))
-        }
+        return Constant.isUsingLTRLanguage ? icExpand : icCollapse
     }
+
     static var collapseImage: NSImage? {
-        if (Constant.isUsingLTRLanguage) {
-            return NSImage(named: NSImage.Name("ic_collapse"))
-        } else {
-            return NSImage(named: NSImage.Name("ic_expand"))
-        }
+        return Constant.isUsingLTRLanguage ? icCollapse : icExpand
     }
 }

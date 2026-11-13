@@ -1,0 +1,34 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Hidden Bar (Release-Direct)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run unit tests
+        run: make test
+
+      - name: Build application
+        run: make build
+
+      - name: Archive app bundle
+        run: ditto -c -k --sequesterRsrc --keepParent "build/Build/Products/Release-Direct/Hidden Bar.app" "build/Hidden-Bar-Direct.app.zip"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hidden-Bar-Direct
+          path: build/Hidden-Bar-Direct.app.zip
+          if-no-files-found: error
