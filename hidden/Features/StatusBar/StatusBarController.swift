@@ -7,11 +7,30 @@
 //
 
 import AppKit
+import UserNotifications
 
 class StatusBarController: MenuBarItemProvider {
 
     //MARK: - Variables
-    private var timer:Timer? = nil
+    private var activeMenuTrackingCount = 0
+    private var isPopupMenuOpen: Bool { activeMenuTrackingCount > 0 }
+
+    private lazy var autoCollapseCoordinator = AutoCollapseCoordinator(
+        isAutoHideEnabled: { Preferences.isAutoHide },
+        delayProvider: { Preferences.numberOfSecondForAutoHide },
+        isCollapsed: { [weak self] in self?.isCollapsed ?? true },
+        isBusy: { [weak self] in
+            guard let self = self else { return false }
+            return self.isMouseInMenuBar || self.isPreferencesWindowVisible || self.isPopupMenuOpen
+        },
+        isAccessibilityAuthorized: { AXIsProcessTrusted() },
+        requestCollapse: { [weak self] completion in
+            self?.collapseMenuBar(completion: completion)
+        },
+        notifyAccessibilityRequired: { [weak self] in
+            self?.notifyAccessibilityPermissionNeeded()
+        }
+    )
 
     //MARK: - BarItems
 
@@ -89,21 +108,27 @@ class StatusBarController: MenuBarItemProvider {
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(handleWorkspaceMenuBarChange), name: NSWorkspace.didWakeNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(updateAutoHide), name: .prefsChanged, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(syncActivationPolicyWithFullStatusBar), name: .useFullStatusBarToggle, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleMenuDidBeginTracking), name: NSMenu.didBeginTrackingNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleMenuDidEndTracking), name: NSMenu.didEndTrackingNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(handleWindowWillClose), name: NSWindow.willCloseNotification, object: nil)
         // Sections are read from where the items sit, so wait until macOS has put
         // them back in place (the always-hidden separator may have been taken
         // out of the bar when the app quit).
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-            if Preferences.areSeparatorsHidden { self?.hideSeparators() }
-            self?.collapseMenuBar()
+            guard let self = self else { return }
+            if Preferences.areSeparatorsHidden { self.hideSeparators() }
+            self.collapseMenuBar { [weak self] result in
+                if result == .unavailable {
+                    self?.autoCollapseCoordinator.handleUnavailable()
+                }
+            }
         }
-
-        autoCollapseIfNeeded()
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
-        timer?.invalidate()
+        autoCollapseCoordinator.cancel()
         hoverDwellTimer?.invalidate()
         if let monitor = hoverMonitor {
             NSEvent.removeMonitor(monitor)
@@ -151,6 +176,7 @@ class StatusBarController: MenuBarItemProvider {
         menuBarEngine.invalidateLayout()
         if wasCollapsed && !isCollapsed {
             didFailToCollapseMenuBar()
+            autoCollapseCoordinator.didInvalidateLayoutToExpanded()
         }
         if wasCollapsed && Preferences.areSeparatorsHidden {
             menuBarEngine.updateAlwaysHiddenSection(enabled: Preferences.alwaysHiddenSectionEnabled, separatorHidden: true)
@@ -270,15 +296,29 @@ class StatusBarController: MenuBarItemProvider {
         //prevented rapid click cause icon show many in Dock
         if isToggle {return}
         isToggle = true
-        self.isCollapsed ? self.expandMenubar() : self.collapseMenuBar()
+        if self.isCollapsed {
+            self.expandMenubar()
+        } else {
+            self.collapseMenuBar { [weak self] result in
+                if result == .unavailable {
+                    self?.autoCollapseCoordinator.handleUnavailable()
+                }
+            }
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.isToggle = false
         }
     }
 
-    private func collapseMenuBar() {
-        guard menuBarEngine.isArrangementValid && !self.isCollapsed else {
-            autoCollapseIfNeeded()
+    private func collapseMenuBar(completion: ((CollapseResult) -> Void)? = nil) {
+        guard !self.isCollapsed else {
+            autoCollapseCoordinator.didCollapse()
+            completion?(.collapsed)
+            return
+        }
+        guard menuBarEngine.isArrangementValid else {
+            autoCollapseCoordinator.armIfNeeded()
+            completion?(.unavailable)
             return
         }
 
@@ -287,9 +327,11 @@ class StatusBarController: MenuBarItemProvider {
             switch result {
             case .collapsed:
                 self.didCollapseMenuBar()
+                self.autoCollapseCoordinator.didCollapse()
             case .unavailable:
                 self.didFailToCollapseMenuBar()
             }
+            completion?(result)
         }
     }
 
@@ -321,7 +363,7 @@ class StatusBarController: MenuBarItemProvider {
         if let button = btnExpandCollapse.button {
             button.image = Assets.collapseImage
         }
-        autoCollapseIfNeeded()
+        autoCollapseCoordinator.didExpand()
 
         if Preferences.useFullStatusBarOnExpandEnabled {
             NSApp.setActivationPolicy(.regular)
@@ -345,26 +387,55 @@ class StatusBarController: MenuBarItemProvider {
         }
     }
 
-    private func autoCollapseIfNeeded() {
-        guard Preferences.isAutoHide else {return}
-        guard !isCollapsed else { return }
-
-        startTimerToAutoHide()
+    @objc private func handleMenuDidBeginTracking() {
+        activeMenuTrackingCount += 1
     }
 
-    private func startTimerToAutoHide() {
-        timer?.invalidate()
-        self.timer = Timer.scheduledTimer(withTimeInterval: Preferences.numberOfSecondForAutoHide, repeats: false) { [weak self] _ in
-            guard let self = self, Preferences.isAutoHide else { return }
-            // Don't yank the bar shut mid-interaction: while the pointer is in the
-            // menubar (hovering, clicking, dragging icons), defer and re-arm.
-            // Intentionally unbounded; each re-arm invalidates the previous timer,
-            // so deferral never accumulates timers.
-            if self.isMouseInMenuBar || self.isPreferencesWindowVisible {
-                self.startTimerToAutoHide()
-            } else {
-                self.collapseMenuBar()
+    @objc private func handleMenuDidEndTracking() {
+        activeMenuTrackingCount = max(0, activeMenuTrackingCount - 1)
+        if activeMenuTrackingCount == 0 {
+            DispatchQueue.main.async { [weak self] in
+                self?.autoCollapseCoordinator.didBecomeIdleFromMenuOrPrefs()
             }
+        }
+    }
+
+    @objc private func handleWindowWillClose() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if !self.isPreferencesWindowVisible {
+                self.autoCollapseCoordinator.didBecomeIdleFromMenuOrPrefs()
+            }
+        }
+    }
+
+    private func notifyAccessibilityPermissionNeeded() {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, _ in
+            guard granted else {
+                DispatchQueue.main.async {
+                    self?.presentAccessibilityAlertFallback()
+                }
+                return
+            }
+            let content = UNMutableNotificationContent()
+            content.title = "Accessibility Permission Required".localized
+            content.body = "Enable Hidden Bar in System Settings > Privacy & Security > Accessibility to auto-collapse menu bar icons.".localized
+            let request = UNNotificationRequest(identifier: "com.mgabs.hiddenbar.accessibility", content: content, trigger: nil)
+            center.add(request)
+        }
+    }
+
+    private func presentAccessibilityAlertFallback() {
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = "Accessibility Permission Required".localized
+        alert.informativeText = "Enable Hidden Bar in System Settings > Privacy & Security > Accessibility to auto-collapse menu bar icons.".localized
+        alert.addButton(withTitle: "Open System Settings".localized)
+        alert.addButton(withTitle: "OK".localized)
+        if alert.runModal() == .alertFirstButtonReturn,
+           let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
         }
     }
 
@@ -398,7 +469,7 @@ class StatusBarController: MenuBarItemProvider {
     }
 
     @objc func updateAutoHide() {
-        autoCollapseIfNeeded()
+        autoCollapseCoordinator.preferencesChanged()
     }
 
     @objc func openPreferenceViewControllerIfNeeded() {
