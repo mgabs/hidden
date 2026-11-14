@@ -17,13 +17,27 @@
                BlueprintIdentifier = "929113F021F9D04100173149"
                BuildableName = "Hidden Bar.app"
                BlueprintName = "Hidden Bar"
-               ReferencedContainer = "container:Hidden Bar.xcodeproj">
+               ReferencedContainer = "container:HiddenBar.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B6ED1C7FB7AE7D98FD4143B2"
+               BuildableName = "HiddenTests.xctest"
+               BlueprintName = "HiddenTests"
+               ReferencedContainer = "container:HiddenBar.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
-      buildConfiguration = "Debug"
+      buildConfiguration = "Debug-Direct"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES">
@@ -35,13 +49,23 @@
                BlueprintIdentifier = "38276456C8B72E6FF49DF8FB"
                BuildableName = "HiddenBarTests.xctest"
                BlueprintName = "HiddenBarTests"
-               ReferencedContainer = "container:Hidden Bar.xcodeproj">
+               ReferencedContainer = "container:HiddenBar.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "B6ED1C7FB7AE7D98FD4143B2"
+               BuildableName = "HiddenTests.xctest"
+               BlueprintName = "HiddenTests"
+               ReferencedContainer = "container:HiddenBar.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Debug"
+      buildConfiguration = "Debug-Direct"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
@@ -57,12 +81,12 @@
             BlueprintIdentifier = "929113F021F9D04100173149"
             BuildableName = "Hidden Bar.app"
             BlueprintName = "Hidden Bar"
-            ReferencedContainer = "container:Hidden Bar.xcodeproj">
+            ReferencedContainer = "container:HiddenBar.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
    <ProfileAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Release-Direct"
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
@@ -74,15 +98,15 @@
             BlueprintIdentifier = "929113F021F9D04100173149"
             BuildableName = "Hidden Bar.app"
             BlueprintName = "Hidden Bar"
-            ReferencedContainer = "container:Hidden Bar.xcodeproj">
+            ReferencedContainer = "container:HiddenBar.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
    <AnalyzeAction
-      buildConfiguration = "Debug">
+      buildConfiguration = "Debug-Direct">
    </AnalyzeAction>
    <ArchiveAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Release-Direct"
       revealArchiveInOrganizer = "YES">
    </ArchiveAction>
 </Scheme>

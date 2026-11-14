@@ -1,7 +1,7 @@
 # Hidden Bar local build & test shortcuts (direct build, unsigned by default).
 # Override variables as needed, e.g.: make build SIGNING=""
 
-PROJECT := Hidden Bar.xcodeproj
+PROJECT := HiddenBar.xcodeproj
 SCHEME := Hidden Bar
 DERIVED_DATA := build
 APP_NAME := Hidden Bar.app
