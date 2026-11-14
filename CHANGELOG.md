@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.12.0 (2026-11-14)
+
+### Fixed
+- Auto-collapse consistency: idle-based countdown (`AutoCollapseCoordinator`) defers while the pointer is in the menu bar, Preferences is open, or a popup menu is tracking; cancels timers on launch/manual collapse and when disabled; re-arms after wake, app launch, or display changes; retries `.unavailable` once before prompting to check Accessibility permission.
+
 ## v1.11.2 (2026-11-14)
 
 ### Fixed
