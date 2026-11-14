@@ -24,7 +24,7 @@ jobs:
       - name: Build application
         run: make build
 
-      - name: Resolve version and package zip
+      - name: Resolve version and package artifacts
         id: pkg
         env:
           GH_TOKEN: ${{ github.token }}
@@ -35,7 +35,15 @@ jobs:
             VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' 'build/Build/Products/Release-Direct/Hidden Bar.app/Contents/Info.plist')"
           fi
           ZIP_NAME="Hidden-Bar-${VERSION}.zip"
+          DMG_NAME="Hidden-Bar-${VERSION}.dmg"
           ditto -c -k --sequesterRsrc --keepParent "build/Build/Products/Release-Direct/Hidden Bar.app" "build/${ZIP_NAME}"
+          STAGE_DIR="build/dmg-staging"
+          rm -rf "${STAGE_DIR}" "build/${DMG_NAME}"
+          mkdir -p "${STAGE_DIR}"
+          cp -R "build/Build/Products/Release-Direct/Hidden Bar.app" "${STAGE_DIR}/"
+          ln -s /Applications "${STAGE_DIR}/Applications"
+          hdiutil create -volname "Hidden Bar" -srcfolder "${STAGE_DIR}" -ov -format UDZO "build/${DMG_NAME}"
+          rm -rf "${STAGE_DIR}"
           SHA256="$(shasum -a 256 "build/${ZIP_NAME}" | awk '{print $1}')"
           RELEASE_EXISTS=false
           if [[ "${GITHUB_REF}" != refs/tags/v* ]] && gh release view "v${VERSION}" >/dev/null 2>&1; then
@@ -43,6 +51,7 @@ jobs:
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "zip_name=${ZIP_NAME}" >> "$GITHUB_OUTPUT"
+          echo "dmg_name=${DMG_NAME}" >> "$GITHUB_OUTPUT"
           echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
           echo "should_release=$([[ "${RELEASE_EXISTS}" == "false" ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
@@ -50,7 +59,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Hidden-Bar-Direct
-          path: build/${{ steps.pkg.outputs.zip_name }}
+          path: |
+            build/${{ steps.pkg.outputs.zip_name }}
+            build/${{ steps.pkg.outputs.dmg_name }}
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -59,7 +70,9 @@ jobs:
         with:
           tag_name: v${{ steps.pkg.outputs.version }}
           name: v${{ steps.pkg.outputs.version }}
-          files: build/${{ steps.pkg.outputs.zip_name }}
+          files: |
+            build/${{ steps.pkg.outputs.zip_name }}
+            build/${{ steps.pkg.outputs.dmg_name }}
           generate_release_notes: true
 
       - name: Update Homebrew Tap Cask
