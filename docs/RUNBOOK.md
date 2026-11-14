@@ -21,11 +21,11 @@ Pass `SIGNING=""` (e.g. `make build SIGNING=""`) to use your Apple Development i
 
 ```sh
 # CI-style build, no signing required
-xcodebuild -project 'Hidden Bar.xcodeproj' -scheme 'Hidden Bar' \
+xcodebuild -project 'HiddenBar.xcodeproj' -scheme 'Hidden Bar' \
   -configuration Debug CODE_SIGNING_ALLOWED=NO build
 
 # runnable local build (uses your Apple Development identity)
-xcodebuild -project 'Hidden Bar.xcodeproj' -scheme 'Hidden Bar' \
+xcodebuild -project 'HiddenBar.xcodeproj' -scheme 'Hidden Bar' \
   -configuration Debug build
 ```
 
@@ -67,8 +67,7 @@ installed app, test the dev build, then re-import and relaunch.
 ## Release
 
 1. Verify the stack: every PR reviewed, builds green, behavioral checks above run.
-2. Bump `MARKETING_VERSION` (all four Hidden Bar configurations) and
-   `CURRENT_PROJECT_VERSION` in the project file.
+2. Bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `Version.xcconfig`.
 3. Archive the GitHub build with the **Hidden Bar** scheme
    (`Release-Direct`), then notarize (Developer ID), staple, zip, and publish a
    GitHub release with notes listing closed issues. The **Hidden Bar App Store**
