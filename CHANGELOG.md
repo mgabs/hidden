@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.12.1 (2026-11-16)
+
+### Fixed
+- macOS 27 (direct build): hiding no longer refuses to collapse when an external display sits above the built-in one. Accessibility coordinates are anchored to the primary display's top, not the whole desktop's, so menu-bar items on such a display were treated as off-screen and the layout was reported incomplete.
+
 ## v1.12.0 (2026-11-14)
 
 ### Fixed

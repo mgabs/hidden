@@ -9,22 +9,23 @@ import AppKit
 import ApplicationServices
 
 enum MenuBarDisplayInventory {
-    // AX uses a desktop-wide top-left origin; AppKit uses bottom-left.  Use the
-    // top of the entire desktop rather than the main display so stacked and
-    // offset external displays map to the same coordinate system as AX.
+    // AX uses a top-left origin at the top of the primary display (the one at
+    // AppKit's origin); AppKit uses bottom-left. A display above the primary one
+    // therefore has negative AX y, which is where its menu bar items report.
     static func current() -> [MenuBarDisplay] {
         let screens = NSScreen.screens
-        guard let desktopTop = screens.map(\.frame.maxY).max() else { return [] }
+        guard let primaryTop = screens.first?.frame.maxY else { return [] }
         return screens.enumerated().map { index, screen in
             let identifier = (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)
                 .map { String($0.uint32Value) } ?? "screen-\(index)"
-            let frame = screen.frame
-            let accessibilityFrame = CGRect(x: frame.minX,
-                                            y: desktopTop - frame.maxY,
-                                            width: frame.width,
-                                            height: frame.height)
-            return MenuBarDisplay(identifier: identifier, appKitFrame: frame, accessibilityFrame: accessibilityFrame)
+            return MenuBarDisplay(identifier: identifier,
+                                  appKitFrame: screen.frame,
+                                  accessibilityFrame: accessibilityFrame(of: screen.frame, primaryTop: primaryTop))
         }
+    }
+
+    static func accessibilityFrame(of frame: CGRect, primaryTop: CGFloat) -> CGRect {
+        return CGRect(x: frame.minX, y: primaryTop - frame.maxY, width: frame.width, height: frame.height)
     }
 }
 

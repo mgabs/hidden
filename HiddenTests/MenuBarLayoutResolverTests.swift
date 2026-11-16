@@ -24,11 +24,12 @@ private func makeItem(bundleIdentifier: String?, x: CGFloat, width: CGFloat = 22
 /// Serves: NativeVisibilityEngine, which keeps only the layout's visible
 /// bundles on screen — a SystemUIServer extra excluded here would always be
 /// hidden by macOS.
-/// Behaviors covered (6): a SystemUIServer item right of the arrow resolves
+/// Behaviors covered (7): a SystemUIServer item right of the arrow resolves
 /// visible, left of the arrow resolves hidden, the most visible of several
 /// same-bundle items wins, an item left of the always-hidden separator
 /// resolves always hidden, the visible side flips in RTL, and a Control
-/// Center item is excluded from the layout entirely.
+/// Center item is excluded from the layout entirely, and a display above the
+/// primary one maps to negative Accessibility y.
 /// These verify resolution over synthetic inputs only; they do not replace
 /// on-device verification that real Menu Extras behave as assumed.
 /// Mock boundary: none — pure function over an array of value-type structs.
@@ -150,5 +151,15 @@ final class MenuBarLayoutResolverTests: XCTestCase {
         XCTAssertEqual(layout.sections["com.apple.systemuiserver"], .visible,
                        "in RTL the visible side flips, so left of the arrow must resolve visible")
         XCTAssertEqual(layout.bundles(in: [.visible]), ["com.apple.systemuiserver"])
+    }
+
+    // Given an external display whose top sits above the primary display's top
+    // When converting its AppKit frame to Accessibility coordinates
+    // Then the origin is the primary display's top, so the y is negative
+    func test_accessibilityFrame_displayAbovePrimary_hasNegativeY() {
+        let external = CGRect(x: -3008, y: 118, width: 3008, height: 1692)
+        let converted = MenuBarDisplayInventory.accessibilityFrame(of: external, primaryTop: 1117)
+        XCTAssertEqual(converted, CGRect(x: -3008, y: -693, width: 3008, height: 1692))
+        XCTAssertTrue(converted.contains(CGPoint(x: -542, y: -677)))
     }
 }

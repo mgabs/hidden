@@ -10,7 +10,7 @@ Accessibility-based menu-bar inventory and multi-display section resolution. `Ac
 - [`MenuBarLayout.swift:MenuBarInventoryProviding`](MenuBarLayout.swift): Protocol defining `isAuthorized`, `requestAuthorization()`, and async main-queue `snapshot(completion:)`.
 - [`MenuBarLayout.swift:MenuBarLayout`](MenuBarLayout.swift): Resolved `[String: MenuBarSection]` map with `bundles(in:)` returning sorted bundle identifiers.
 - [`MenuBarLayout.swift:MenuBarLayoutResolver`](MenuBarLayout.swift): Resolves `[MenuBarInventoryItem]` into `MenuBarLayout?` across displays (`resolve(...)`), projecting separator frames from the arrow-edge distance (`section(of:separatorFrame:alwaysHiddenSeparatorFrame:isLTR:)`), excluding `ownBundle` and `systemItemOwners` (`com.apple.MenuBarAgent`, `com.apple.controlcenter`).
-- [`AccessibilityMenuBarInventory.swift:MenuBarDisplayInventory`](AccessibilityMenuBarInventory.swift): `current()` converts `NSScreen.screens` frames into `MenuBarDisplay`s using `desktopTop` for top-left Accessibility coordinates.
+- [`AccessibilityMenuBarInventory.swift:MenuBarDisplayInventory`](AccessibilityMenuBarInventory.swift): `current()` converts `NSScreen.screens` frames into `MenuBarDisplay`s using the primary display top as the top-left Accessibility origin.
 - [`AccessibilityMenuBarInventory.swift:AccessibilityMenuBarInventory`](AccessibilityMenuBarInventory.swift): `MenuBarInventoryProviding` implementation querying `AXIsProcessTrusted()`, prompting once via `AXIsProcessTrustedWithOptions`, and concurrently walking `.app` processes' `AXExtrasMenuBar` children (`messagingTimeout = 0.1`s), plus `frame(of:)`.
 
 ## Invariants
